@@ -1,0 +1,86 @@
+.book-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 24px;
+  padding: 16px 0;
+}
+
+.book-card {
+  padding: 16px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgb(231, 231, 231), rgba(234, 224, 250, 0.9));
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+}
+
+.book-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.12);
+}
+
+.book-card__content h3 {
+  color: rgb(37, 37, 37);
+}
+
+.book-card__content p {
+  color: rgb(83, 83, 83);
+}
+
+.book-card__actions {
+  margin: 10px 0;
+  display: flex;
+  justify-content: space-evenly;
+  gap: 5px;
+}
+
+.book-card__button {
+  padding: 10px;
+  border-radius: 5px;
+  border: 1px solid;
+  transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+}
+
+.book-card__button:hover {
+  opacity: 0.92;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+}
+
+.book-card__button:active {
+  transform: translateY(1px);
+}
+
+.book-card__button--primary {
+  background-color: rgb(0, 129, 209);
+}
+
+.book-card__button--danger {
+  background-color: rgba(196, 0, 0, 0.658);
+}
+
+/* Styles simples pour BookForm (léger et pédagogique) */
+.book-form {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  margin: 12px 0 20px;
+}
+
+.book-form__row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.book-form__row input {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.12);
+}
+
+.book-form__actions {
+  display: flex;
+  align-items: center;
+}
