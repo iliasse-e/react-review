@@ -3,16 +3,31 @@ import './App.css'
 import { booksData } from './booksData'
 import BookForm from './components/BookForm';
 import Filters from './components/Filters';
-import { BookList } from './components/BookList';
-import { useState, useMemo } from 'react';
+import BookList from './components/BookList';
+import { useState, useMemo, useEffect } from 'react';
 
 function App() {
-  // state principal des livres
-  const [books, setBooks] = useState(booksData)
-
   // états des filtres (valeurs 'all' pour pas de filtre)
   const [genreFilter, setGenreFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+
+  // state principal des livres (chargement initial depuis localStorage)
+  const [books, setBooks] = useState(() => {
+    const savedBooks = localStorage.getItem('books')
+    if (savedBooks) {
+      try {
+        return JSON.parse(savedBooks)
+      } catch (error) {
+        console.error('Erreur de parsing localStorage books:', error)
+        return booksData
+      }
+    }
+    return booksData
+  })
+
+  useEffect(() => {
+    localStorage.setItem('books', JSON.stringify(books))
+  }, [books])
 
   // onAdd: appelé par BookForm
   function handleAdd(newBook) {
@@ -32,6 +47,19 @@ function App() {
 
   function handleStatusChange(e) {
     setStatusFilter(e.target.value)
+  }
+
+  function handleBookDelete(id) {
+    setBooks((prevBooks) => prevBooks.filter((book) => book.id !== id))
+  }
+
+  function handleBookStatusChange(id, status) {
+    setBooks((prevBooks) =>
+      prevBooks.map((book) => {
+        if (book.id !== id) return book
+        return { ...book, status }
+      })
+    )
   }
 
   // calcul des livres filtrés (optimisé avec useMemo)
@@ -58,7 +86,11 @@ function App() {
         onGenreChange={handleGenreChange}
         onStatusChange={handleStatusChange}
       />
-      <BookList books={filteredBooks} />
+      <BookList 
+        books={filteredBooks} 
+        onStatusChange={handleBookStatusChange} 
+        onDelete={handleBookDelete}
+      />
     </>
   )
 }

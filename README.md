@@ -32,21 +32,25 @@ Projet fil rouge pour maîtriser les concepts fondamentaux de React en partant d
 ## CSS : 🌙 Thème sombre
 Le fichier root CSS contient une règle `@media (prefers-color-scheme: dark)` qui active un thème sombre quand l'utilisateur a choisi le mode sombre dans son système.
 
+
 ## React DOM : quelques points utiles
 
-## 🗺️ Feuille de route & Progression
+- `className` remplace `class` en JSX.
+- `htmlFor` remplace `for` sur les `<label>`.
+- `onChange` sur un `<input>` reçoit un `event` (`e`) et se déclenche à chaque saisie.
+```jsx
+  <input
+    value={title}
+    onChange={(e) => setTitle(e.target.value)}
+    placeholder="Ex: Les Damnés de la Terre"
+  />
+```
 
-- [ ] **Chapitre 1 : Composants & Props**
-  - *Ce que j'ai fait :* (À compléter)
-  - *Ce que j'ai compris :* (À compléter)
-- [ ] **Chapitre 2 : Le State (`useState`)**
-  - *Ce que j'ai fait :* - *Ce que j'ai compris :*
-- [ ] **Chapitre 3 : Listes et Rendu Conditionnel**
-  - *Ce que j'ai fait :*
-  - *Ce que j'ai compris :*
-- [ ] **Chapitre 4 : Les Effets (`useEffect`) & Persistance**
-  - *Ce que j'ai fait :*
-  - *Ce que j'ai compris :*
+- `onClick` se met sur un bouton ou un élément cliquable.
+- `e.preventDefault()` bloque le comportement par défaut (par exemple l'envoi de formulaire qui recharge la page).
+- Dans React, on manipule souvent `value={...}` + `onChange={...}` pour contrôler un champ.
+- Les noms d'attributs sont en camelCase : `tabIndex`, `readOnly`, `defaultValue`.
+
 
 ## Chapitre 1 : Composants & Props
 Ce chapitre explique l'essentiel de ce que tu utilises déjà dans ce projet.
@@ -156,22 +160,105 @@ const total = useMemo(() => {
 - Si `items` ne change pas, React réutilise le total précédent.
 - Si `items` change, le calcul est relancé.
 
+
+## Chapitre 3 : rendu conditionnel
+Le rendu conditionnel permet d'afficher une partie de l'interface seulement quand une condition est vraie.
+
+### 1. Expression ternaire avec `? :` 
+```jsx
+{filteredBooks.length === 0 ? (
+  <p>Aucun livre trouvé</p>
+) : (
+  <BookList books={filteredBooks} />
+)}
+```
+- Si la condition est vraie, React affiche le premier bloc.
+- Sinon, il affiche le second.
+
+### 2. Condition avec `&&`
+```jsx
+{filteredBooks.length === 0 && <p>Aucun livre trouvé</p>}
+```
+- Si `filteredBooks.length === 0` est vrai, le message s'affiche.
+- Si c'est faux, React ne montre rien.
+
+### 3. `return` conditionnel dans un composant
+```jsx
+function BookSection({ books }) {
+  if (books.length === 0) {
+    return <p>Aucun livre trouvé</p>
+  }
+
+  return <BookList books={books} />
+}
+```
+- Cela permet d'écrire une logique simple avant le rendu.
+
+### 4. Pourquoi c'est utile ici
+- Afficher un message quand aucun livre ne correspond aux filtres.
+- Éviter d'afficher une liste vide sans explication.
+- Garder l'interface claire et compréhensible.
+
+
+## Chapitre 4 : `useEffect`
+`useEffect` est un hook React qui permet d'exécuter du code secondaire en réaction au cycle de vie d'un composant.
+
+- On l'utilise pour :
+  - récupérer des données depuis une API,
+  - enregistrer dans le localStorage,
+  - écouter des événements externes,
+  - déclencher une action quand une valeur change.
+- La syntaxe :
+```jsx
+useEffect(() => {
+  // effet à exécuter
+}, [dep1, dep2])
+```
+- React exécute l'effet après le rendu du composant.
+- Si la liste de dépendances est vide `[]`, l'effet ne s'exécute qu'une fois au montage.
+- Si on met des variables dans la liste, l'effet se ré-exécute quand elles changent.
+
+### Exemple : sauvegarder les livres dans le navigateur
+```jsx
+useEffect(() => {
+  localStorage.setItem('books', JSON.stringify(books))
+}, [books])
+```
+- À chaque fois que `books` change, on enregistre la nouvelle liste.
+- Cela permet de persister les données entre deux visites.
+
+### Exemple : effet de montage seulement
+```jsx
+useEffect(() => {
+  console.log('App monté')
+}, [])
+```
+- Ce code tourne une seule fois, dès que le composant s'affiche.
+
+### Nettoyage d'un effet avec `return`
+```jsx
+useEffect(() => {
+  function handleResize() {
+    console.log(window.innerWidth)
+  }
+
+  window.addEventListener('resize', handleResize)
+
+  return () => {
+    window.removeEventListener('resize', handleResize)
+  }
+}, [])
+```
+- `return` permet de nettoyer l'effet quand le composant disparaît.
+- C'est indispensable pour éviter les fuites mémoire et les écouteurs en double.
+
+### Pourquoi c'est utile dans ce projet
+- `useEffect` est pratique pour charger ou sauvegarder la liste de livres.
+- Il sépare le rendu (`JSX`) des effets de bord (API, localStorage, événements).
+- Il évite de faire ces actions à chaque render sans raison.
+
+
 ## 🧠 Notes de Cheat Sheet (Mes mots à moi)
 *(Notez ici vos propres définitions de Props, State, et hooks au fur et à mesure)*
 
 
-- `className` remplace `class` en JSX.
-- `htmlFor` remplace `for` sur les `<label>`.
-- `onChange` sur un `<input>` reçoit un `event` (`e`) et se déclenche à chaque saisie.
-```jsx
-  <input
-    value={title}
-    onChange={(e) => setTitle(e.target.value)}
-    placeholder="Ex: Les Damnés de la Terre"
-  />
-```
-
-- `onClick` se met sur un bouton ou un élément cliquable.
-- `e.preventDefault()` bloque le comportement par défaut (par exemple l'envoi de formulaire qui recharge la page).
-- Dans React, on manipule souvent `value={...}` + `onChange={...}` pour contrôler un champ.
-- Les noms d'attributs sont en camelCase : `tabIndex`, `readOnly`, `defaultValue`.

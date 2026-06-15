@@ -84,3 +84,36 @@
   display: flex;
   align-items: center;
 }
+
+.book-list__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+  color: rgb(109, 109, 109);
+  padding: 28px 0;
+  gap: 8px;
+}
+
+.book-list__empty h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  color: rgb(56, 56, 56);
+}
+
+.book-list__empty p {
+  margin: 0;
+  max-width: 420px;
+  color: rgb(118, 118, 118);
+  line-height: 1.5;
+}
+
+.book-list__empty {
+  text-align: center;
+  width: 100%;
+  color: rgb(109, 109, 109);
+  padding: 22px 0;
+  font-size: 1rem;
+}
