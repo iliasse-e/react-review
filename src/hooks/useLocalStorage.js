@@ -1,24 +1,26 @@
 import { useEffect, useState } from "react"
 
-function useLocalStorage(key, initData) {
-  const [books, setBooks] = useState(() => {
-    const savedBooks = localStorage.getItem(key)
-    if (savedBooks) {
+function useLocalStorage(key, initialValue) {
+  // 1. Charger depuis localStorage au montage
+  const [storedValue, setStoredValue] = useState(() => {
+    const saved = localStorage.getItem(key)
+    if (saved) {
       try {
-        return JSON.parse(savedBooks)
+        return JSON.parse(saved)
       } catch (error) {
-        console.error('Erreur de parsing localStorage books:', error)
-        return initData
+        console.error('Erreur de parsing localStorage:', error)
+        return initialValue
       }
     }
-    return initData
+    return initialValue
   })
 
+  // 2. Sauvegarder dans localStorage à chaque changement
   useEffect(() => {
-    localStorage.setItem('books', JSON.stringify(books))
-  }, [books])
+    localStorage.setItem(key, JSON.stringify(storedValue))
+  }, [storedValue, key])
 
-  return [books, setBooks]
+  return [storedValue, setStoredValue]
 }
 
 export default useLocalStorage
