@@ -4,30 +4,8 @@ Projet fil rouge pour maîtriser les concepts fondamentaux de React en partant d
 
 ## Wireframe de l'app
 
-+-----------------------------------------------------------------------+
-| 📚 MON BOOK TRACKER (Militant & Engagé)          [ Total : 6 livres ] | -> Header
-+-----------------------------------------------------------------------+
-|                                                                       |
-|  [ Ajouter un livre ]                                                 | -> BookForm
-|  Titre : [__________________]  Auteur : [____________________]         |
-|  Genre : [ Décolonialisme v]   [ + Ajouter au Tracker ]               |
-|                                                                       |
-+-----------------------------------------------------------------------+
-|  Filtrer par genre : ( Tout ) ( Décolonialisme ) ( Féminisme )       | -> Filters
-|  Filtrer par statut : ( Tout ) ( À lire ) ( En cours ) ( Lu )         |
-+-----------------------------------------------------------------------+
-|                                                                       |
-|  +---------------------------+   +---------------------------+        |
-|  | Les Damnés de la Terre    |   | Femmes, Race et Classe    |        | -> BookList
-|  | Par : Frantz Fanon        |   | Par : Angela Davis        |        |    contenant
-|  | Genre : Décolonialisme    |   | Genre : Féminisme         |        |    plusieurs
-|  |                           |   |                           |        |    BookCard
-|  | [ Statut : Lu 🟩 ]         |   | [ Statut : En cours 🟨 ]   |        |
-|  |                           |   |                           |        |
-|  | ( Supprimer )             |   | ( Supprimer )             |        |
-|  +---------------------------+   +---------------------------+        |
-|                                                                       |
-+-----------------------------------------------------------------------+
+![Wireframe book tracker](/src/assets/wireframe-book-tracker.png)
+
 
 ## CSS : 🌙 Thème sombre
 Le fichier root CSS contient une règle `@media (prefers-color-scheme: dark)` qui active un thème sombre quand l'utilisateur a choisi le mode sombre dans son système.
@@ -258,7 +236,123 @@ useEffect(() => {
 - Il évite de faire ces actions à chaque render sans raison.
 
 
-## 🧠 Notes de Cheat Sheet (Mes mots à moi)
-*(Notez ici vos propres définitions de Props, State, et hooks au fur et à mesure)*
+## Chapitre 5 : Custom Hooks
 
+Un custom hook est une fonction React qui réutilise d'autres hooks (`useState`, `useEffect`, etc.).
+
+- Un custom hook commence toujours par `use` : `useLocalStorage`, `useFetch`, `useForm`.
+- C'est juste du JavaScript : une fonction qui appelle d'autres hooks.
+- Cela permet d'extraire la logique et de la partager entre composants.
+
+### Pourquoi un custom hook ?
+- Éviter de répéter le même code dans plusieurs composants.
+- Rendre le composant plus lisible et petit.
+- Centraliser la logique métier (ex : chargement/sauvegarde localStorage).
+
+### Exemple simple : `useLocalStorage`
+C'est un hook qui gère la lecture et l'écriture dans localStorage de manière propre.
+
+```jsx
+function useLocalStorage(key, initialValue) {
+  // 1. Charger depuis localStorage au montage
+  const [storedValue, setStoredValue] = useState(() => {
+    const saved = localStorage.getItem(key)
+    if (saved) {
+      try {
+        return JSON.parse(saved)
+      } catch (error) {
+        console.error('Erreur de parsing localStorage:', error)
+        return initialValue
+      }
+    }
+    return initialValue
+  })
+
+  // 2. Sauvegarder dans localStorage à chaque changement
+  useEffect(() => {
+    localStorage.setItem(key, JSON.stringify(storedValue))
+  }, [storedValue, key])
+
+  return [storedValue, setStoredValue]
+}
+```
+
+### Comment utiliser `useLocalStorage` ?
+```jsx
+function App() {
+  // Au lieu de :
+  // const [books, setBooks] = useState(() => { ... })
+  // useEffect(() => { localStorage.setItem(...) }, [books])
+
+  // On utilise simplement :
+  const [books, setBooks] = useLocalStorage('books', booksData)
+
+  // Et c'est tout ! localStorage est géré automatiquement
+}
+```
+
+### Avantages
+- `App.jsx` devient plus court et plus lisible.
+- Si tu as besoin de localStorage ailleurs, tu réutilises juste `useLocalStorage`.
+- La logique est testable (on peut tester le hook isolément).
+
+### Structure d'un custom hook
+1. Le hook **doit être une fonction** (pas une classe).
+2. Le hook **doit appeler d'autres hooks** (`useState`, `useEffect`, etc.).
+3. Le nom **doit commencer par `use`** (convention React).
+4. On peut le créer n'importe où et l'importer dans d'autres composants.
+
+### Exemple : `useFetch`
+Un hook pour charger des données depuis une API :
+
+```jsx
+function useFetch(url, initialValue) {
+  const [data, setData] = useState(initialValue)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    let mounted = true
+
+    fetch(url)
+      .then((res) => res.json())
+      .then((json) => {
+        if (mounted) {
+          setData(json)
+          setLoading(false)
+        }
+      })
+      .catch((err) => {
+        if (mounted) {
+          setError(err)
+          setLoading(false)
+        }
+      })
+
+    return () => {
+      mounted = false
+    }
+  }, [url])
+
+  return [data, loading, error]
+}
+```
+
+### Utilisation
+```jsx
+function App() {
+  const [books, loading, error] = useFetch('/api/books', [])
+
+  if (loading) return <p>Chargement...</p>
+  if (error) return <p>Erreur : {error.message}</p>
+
+  return <BookList books={books} />
+}
+```
+
+### Bonnes pratiques pour les custom hooks
+- Nommer avec le préfixe `use` : `useForm`, `useAuth`, `useDebounce`.
+- Documenter les paramètres et la valeur retournée.
+- Garder le hook simple, une responsabilité par hook.
+- Créer un dossier `hooks/` pour les organiser.
 

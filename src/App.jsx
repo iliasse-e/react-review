@@ -4,7 +4,8 @@ import { booksData } from './booksData'
 import BookForm from './components/BookForm';
 import Filters from './components/Filters';
 import BookList from './components/BookList';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
+import useLocalStorage from './hooks/useLocalStorage';
 
 function App() {
   // états des filtres (valeurs 'all' pour pas de filtre)
@@ -12,22 +13,7 @@ function App() {
   const [statusFilter, setStatusFilter] = useState('all')
 
   // state principal des livres (chargement initial depuis localStorage)
-  const [books, setBooks] = useState(() => {
-    const savedBooks = localStorage.getItem('books')
-    if (savedBooks) {
-      try {
-        return JSON.parse(savedBooks)
-      } catch (error) {
-        console.error('Erreur de parsing localStorage books:', error)
-        return booksData
-      }
-    }
-    return booksData
-  })
-
-  useEffect(() => {
-    localStorage.setItem('books', JSON.stringify(books))
-  }, [books])
+  const [books, setBooks] = useLocalStorage('book', booksData)
 
   // onAdd: appelé par BookForm
   function handleAdd(newBook) {
