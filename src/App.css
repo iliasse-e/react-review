@@ -81,8 +81,7 @@
 }
 
 .book-form__actions {
-  display: flex;
-  align-items: center;
+  align-self: end;
 }
 
 .book-list__empty {
@@ -116,4 +115,10 @@
   color: rgb(109, 109, 109);
   padding: 22px 0;
   font-size: 1rem;
+}
+
+.filters {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
 }

@@ -2,7 +2,7 @@ export function Filters({ genre = 'all', status = 'all', onGenreChange, onStatus
   return (
     <div className="filters">
       <div className="filters__by-genre">
-        <label htmlFor="filter-genre">Filtrer par genre :</label>
+        <label htmlFor="filter-genre">Filtrer par genre : </label>
         <select id="filter-genre" value={genre} onChange={onGenreChange}>
           <option value="all">Tous</option>
           <option value="décolonial">Décolonialisme</option>
@@ -16,7 +16,7 @@ export function Filters({ genre = 'all', status = 'all', onGenreChange, onStatus
       </div>
 
       <div className="filters__by-status">
-        <label htmlFor="filter-status">Filtrer par statut :</label>
+        <label htmlFor="filter-status">Filtrer par statut : </label>
         <select id="filter-status" value={status} onChange={onStatusChange}>
           <option value="all">Tous</option>
           <option value="lu">Lu</option>

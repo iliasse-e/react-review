@@ -23,14 +23,19 @@ Le fichier root CSS contient une règle `@media (prefers-color-scheme: dark)` qu
     placeholder="Ex: Les Damnés de la Terre"
   />
 ```
+  [Documentation (fr.react.dev) — Gérer l'état / chargement de données](https://fr.react.dev/learn/managing-state)
 
 - `onClick` se met sur un bouton ou un élément cliquable.
+  [Documentation (fr.react.dev) — Ajouter de l'interactivité (formulaires)](https://fr.react.dev/learn/adding-interactivity)
 - `e.preventDefault()` bloque le comportement par défaut (par exemple l'envoi de formulaire qui recharge la page).
 - Dans React, on manipule souvent `value={...}` + `onChange={...}` pour contrôler un champ.
+  [Documentation (fr.react.dev) — Documentation générale React](https://fr.react.dev/)
 - Les noms d'attributs sont en camelCase : `tabIndex`, `readOnly`, `defaultValue`.
 
+  [Documentation (fr.react.dev) — Apprendre React (concepts liés au routing)](https://fr.react.dev/learn)
 
 ## Chapitre 1 : Composants & Props
+[Documentation (fr.react.dev) — Composants & Props](https://fr.react.dev/learn/describing-the-ui)
 Ce chapitre explique l'essentiel de ce que tu utilises déjà dans ce projet.
 
 ### 1. Qu'est-ce qu'un composant ?
@@ -56,6 +61,8 @@ function BookCard({ title, author }) {
 - Dans l'exemple, `title` et `author` sont des props.
 - Les props sont immuables dans le composant enfant : on ne les modifie pas.
 - Elles peuvent être une fonction (voir plus bas)
+- On peut affecter une valeur par défaut au prop
+`title = "Vilain petit canard"`
 
 ### 4. Comment utiliser un composant
 ```jsx
@@ -122,7 +129,9 @@ En résumé :
 - `useState` sert à garder et modifier les données dans un composant.
 - `onAdd` est l'action qui connecte le formulaire au state de l'application.
 
+
 ## Chapitre 2 : `useMemo`
+[Documentation (fr.react.dev) — `useMemo`](https://fr.react.dev/reference/react/useMemo)
 `useMemo` est un hook React qui permet de mémoriser le résultat d'un calcul.
 
 - On l'utilise quand un calcul est un peu lourd et qu'on ne veut pas le refaire à chaque rendu.
@@ -140,6 +149,7 @@ const total = useMemo(() => {
 
 
 ## Chapitre 3 : rendu conditionnel
+[Documentation (fr.react.dev) — Affichage conditionnel](https://fr.react.dev/learn/adding-interactivity)
 Le rendu conditionnel permet d'afficher une partie de l'interface seulement quand une condition est vraie.
 
 ### 1. Expression ternaire avec `? :` 
@@ -179,6 +189,8 @@ function BookSection({ books }) {
 
 
 ## Chapitre 4 : `useEffect`
+[Documentation (fr.react.dev) — `useEffect`](https://fr.react.dev/reference/react/useEffect)
+
 `useEffect` est un hook React qui permet d'exécuter du code secondaire en réaction au cycle de vie d'un composant.
 
 - On l'utilise pour :
@@ -236,7 +248,9 @@ useEffect(() => {
 - Il évite de faire ces actions à chaque render sans raison.
 
 
+
 ## Chapitre 5 : Custom Hooks
+[Documentation (fr.react.dev) — Hooks (général)](https://fr.react.dev/learn)
 
 Un custom hook est une fonction React qui réutilise d'autres hooks (`useState`, `useEffect`, etc.).
 
@@ -356,3 +370,129 @@ function App() {
 - Garder le hook simple, une responsabilité par hook.
 - Créer un dossier `hooks/` pour les organiser.
 
+
+
+## Chapitre 6 : useReduce
+[Documentation (fr.react.dev) — `useReducer`](https://fr.react.dev/reference/react/useReducer)
+
+`useReducer` est un hook React destiné à gérer des états plus complexes ou des transitions d'état multiples de façon prévisible.
+
+- Quand l'utiliser :
+  - logique de mise à jour complexe (plusieurs champs qui changent ensemble),
+  - plusieurs actions possibles (add / remove / toggle / edit),
+  - quand on veut centraliser la logique de mise à jour dans une fonction pure.
+
+  *Définition — fonction pure : une fonction qui, pour les mêmes entrées, retourne toujours la même sortie et n'a pas d'effets de bord (pas d'accès réseau, pas de `localStorage`, pas de mutation d'objets externes). Dans le cas d'un `reducer`, cela implique de ne pas muter l'état existant mais de renvoyer un nouvel objet d'état.*
+  
+### Syntaxe
+```jsx
+const [state, dispatch] = useReducer(reducer, initialState, init)
+```
+- `reducer` : `(state, action) => newState` — une fonction pure qui décrit comment l'état change en fonction d'une action.
+  
+- `dispatch` : fonction pour envoyer des actions (`dispatch({ type: 'ADD', payload: ... })`).
+- `init` : fonction facultative pour l'initialisation paresseuse (utile pour charger depuis `localStorage`).
+
+### Exemple simple (gestion de la liste de livres)
+```jsx
+const initialState = booksData
+
+function booksReducer(state, action) {
+  switch (action.type) {
+    case 'ADD':
+      return [action.payload, ...state]
+    case 'REMOVE':
+      return state.filter((b) => b.id !== action.payload)
+    case 'TOGGLE_READ':
+      return state.map((b) =>
+        b.id === action.payload ? { ...b, read: !b.read } : b
+      )
+    default:
+      return state
+  }
+}
+
+function App() {
+  const [books, dispatch] = useReducer(booksReducer, initialState)
+
+  function handleAdd(book) {
+    dispatch({ type: 'ADD', payload: book })
+  }
+
+  function handleRemove(id) {
+    dispatch({ type: 'REMOVE', payload: id })
+  }
+
+  function handleToggleRead(id) {
+    dispatch({ type: 'TOGGLE_READ', payload: id })
+  }
+
+  return (
+    // ... BookForm envoie des actions via props ou onAdd qui utilise dispatch
+  )
+}
+```
+
+### Points importants
+- Le `reducer` doit être une fonction **pure** : pas d'effets de bord (API, `localStorage`, etc.) à l'intérieur.
+- Place les effets secondaires (sauvegarde, fetch) dans `useEffect` ; déclenche-les après un `dispatch` si nécessaire.
+- Utilise un `init` pour initialiser l'état depuis `localStorage` sans coût au montage :
+```jsx
+const [books, dispatch] = useReducer(booksReducer, [], () => {
+  const saved = localStorage.getItem('books')
+  return saved ? JSON.parse(saved) : booksData
+})
+
+useEffect(() => {
+  localStorage.setItem('books', JSON.stringify(books))
+}, [books])
+```
+
+### Quand préférer `useState`
+- Pour des états simples et indépendants (un champ, un booléen), `useState` est plus concis.
+- `useReducer` devient intéressant quand les mises à jour sont liées ou nombreuses.
+
+### Bonnes pratiques
+- Déclare des types d'actions constants (`const ADD = 'ADD'`) pour éviter les fautes de frappe.
+- Garde le reducer petit et testable ; couvre chaque action par des tests unitaires.
+- Pour éviter le prop drilling, combine `useReducer` avec `useContext` et expose `state` + `dispatch`.
+
+### Analogie avec Redux
+- Similarité principale : le pattern `reducer + action` est identique. Dans les deux cas, une fonction pure `reducer(state, action)` reçoit l'état courant et une action, et retourne le nouvel état.
+- `dispatch` fonctionne conceptuellement de la même manière : on envoie des actions décrivant ce qui doit changer.
+- Différences clés :
+  - portée : `useReducer` gère un état local au composant (ou un sous-arbre via `Context`), tandis que Redux gère généralement un store global partagé.
+  - écosystème : Redux propose middleware (thunks, sagas), devtools, et un flux d'architecture plus formel pour les effets asynchrones ; `useReducer` ne fournit pas ces couches par défaut.
+  - initialisation et persistance : Redux a des patterns et outils dédiés pour hydrater/synchroniser le store ; avec `useReducer` on utilise `init` + `useEffect` manuellement.
+- Quand faire une analogie :
+  - si tu connais Redux, tu peux écrire des `reducer` locaux avec les mêmes conventions (types constants, action creators) et migrer ensuite vers Redux si besoin.
+  - combiner `useReducer` + `useContext` permet de reproduire un petit store local sans dépendance externe.
+
+En résumé : `useReducer` apporte structure et prévisibilité pour la gestion d'états complexes. Il s'intègre bien dans des applications où les actions sur l'état sont nombreuses et où l'on veut centraliser la logique de mise à jour.
+
+### Quand préférer `useReducer` vs `useState`
+
+- **Règle simple :** `useState` pour des états simples et indépendants ; `useReducer` quand la logique de mise à jour devient liée, multiple, ou difficile à raisonner.
+- **Signes qu'il est temps de migrer :**
+  - Tu as plusieurs `useState` qui doivent être modifiés ensemble pour rester cohérents.
+  - Tu as plusieurs types d'actions (ajout, suppression, édition, toggle) qui affectent le même morceau d'état.
+  - La logique de mise à jour contient des conditions/branches importantes ou du code répété.
+  - Tu veux tester la logique d'état séparément (le `reducer` est facilement testable).
+  - Tu subis du prop-drilling pour passer des setters : `useReducer` + `useContext` aide à réduire ça.
+- **Règle pratique :** si tu manipules 3+ sous-états liés ou 2–3 actions différentes fréquemment, `useReducer` vaut le coup.
+- **Exemples dans ce projet :**
+  - La gestion de la liste `books` (ajout / suppression / toggle lu / édition) — bon candidat.
+  - Un formulaire multi-champs avec logique de validation et reset.
+
+Si tu veux, je peux convertir `App.jsx` pour utiliser `useReducer` (et `useContext`) en exemple concret.
+
+## Chapitre 7 : Fetch / API
+
+
+## Chapitre 8 : Validation de formulaire
+
+
+## Chapitre 9 : Tests
+
+
+## Chapitre 10 : React router

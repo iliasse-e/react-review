@@ -12,7 +12,7 @@ function App() {
   const [genreFilter, setGenreFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
 
-  // state principal des livres (chargement initial depuis localStorage)
+  // hook custom (chargement initial des livres depuis localStorage)
   const [books, setBooks] = useLocalStorage('book', booksData)
 
   // onAdd: appelé par BookForm
