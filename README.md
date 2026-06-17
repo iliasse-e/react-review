@@ -392,7 +392,6 @@ const [state, dispatch] = useReducer(reducer, initialState, init)
   
 - `dispatch` : fonction pour envoyer des actions (`dispatch({ type: 'ADD', payload: ... })`).
 - `init` : fonction facultative pour l'initialisation paresseuse (utile pour charger depuis `localStorage`).
-
 ### Exemple simple (gestion de la liste de livres)
 ```jsx
 const initialState = booksData
@@ -448,6 +447,56 @@ useEffect(() => {
 }, [books])
 ```
 
+
+### Initialisation paresseuse vs synchrone
+
+**Sans `init` (initialisation simple) :**
+```jsx
+const [books, dispatch] = useReducer(booksReducer, booksData)
+// React : books = booksData immédiatement
+```
+- Le 2e argument devient l'état initial directement.
+- Problème : si `booksData` est volumineux, le calcul a lieu à chaque rendu du parent.
+
+**Avec `init` (initialisation paresseuse) :**
+```jsx
+function initBooks() {
+  const saved = localStorage.getItem('books')
+  return saved ? JSON.parse(saved) : booksData
+}
+
+const [books, dispatch] = useReducer(booksReducer, booksData, initBooks)
+// React : books = initBooks(booksData) UNE SEULE FOIS au montage
+```
+- La fonction `init` est appelée **une seule fois** au montage, pas à chaque rendu.
+- React passe le 2e argument (`booksData`) à `init()` ; il l'ignore autrement.
+- Utile pour charger depuis `localStorage`, faire des calculs initiaux onéreux, etc.
+
+**Et les promesses / async ?**
+- ❌ `init` doit être **synchrone** et retourner une valeur, pas une Promise.
+- ❌ Les promesses/fetch doivent aller dans `useEffect`, pas dans `init`.
+```jsx
+// ❌ Ne marche pas :
+function initBooks() {
+  return fetch('/api/books')  // ← Promise, pas une valeur !
+}
+const [books, dispatch] = useReducer(booksReducer, booksData, initBooks)
+
+// ✅ Correct : utilise useEffect pour async
+function useBooks() {
+  const [books, dispatch] = useReducer(booksReducer, [])
+  
+  useEffect(() => {
+    fetch('/api/books')
+      .then(res => res.json())
+      .then(data => dispatch({ type: 'SET_BOOKS', payload: data }))
+  }, [])
+  
+  return [books, dispatch]
+}
+```
+
+
 ### Quand préférer `useState`
 - Pour des états simples et indépendants (un champ, un booléen), `useState` est plus concis.
 - `useReducer` devient intéressant quand les mises à jour sont liées ou nombreuses.
@@ -484,7 +533,6 @@ En résumé : `useReducer` apporte structure et prévisibilité pour la gestion 
   - La gestion de la liste `books` (ajout / suppression / toggle lu / édition) — bon candidat.
   - Un formulaire multi-champs avec logique de validation et reset.
 
-Si tu veux, je peux convertir `App.jsx` pour utiliser `useReducer` (et `useContext`) en exemple concret.
 
 ## Chapitre 7 : Fetch / API
 

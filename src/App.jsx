@@ -1,19 +1,18 @@
 import { Header } from './components/Header'
 import './App.css'
-import { booksData } from './booksData'
 import BookForm from './components/BookForm';
 import Filters from './components/Filters';
 import BookList from './components/BookList';
 import { useState, useMemo } from 'react';
-import useLocalStorage from './hooks/useLocalStorage';
+import { useBooks, BOOK_ACTIONS } from './hooks/useBooks';
 
 function App() {
   // états des filtres (valeurs 'all' pour pas de filtre)
   const [genreFilter, setGenreFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
 
-  // hook custom (chargement initial des livres depuis localStorage)
-  const [books, setBooks] = useLocalStorage('book', booksData)
+  // Custom hook : gère les livres et la persistence localStorage
+  const [books, dispatch] = useBooks()
 
   // onAdd: appelé par BookForm
   function handleAdd(newBook) {
@@ -23,7 +22,7 @@ function App() {
       status: "a-lire", 
       ...newBook 
     }
-    setBooks((prev) => [bookWithId, ...prev])
+    dispatch({ type: BOOK_ACTIONS.ADD_BOOK, payload: bookWithId })
   }
 
   // gestionnaires simples passés à Filters
@@ -36,16 +35,11 @@ function App() {
   }
 
   function handleBookDelete(id) {
-    setBooks((prevBooks) => prevBooks.filter((book) => book.id !== id))
+    dispatch({ type: BOOK_ACTIONS.DELETE_BOOK, payload: { id } })
   }
 
   function handleBookStatusChange(id, status) {
-    setBooks((prevBooks) =>
-      prevBooks.map((book) => {
-        if (book.id !== id) return book
-        return { ...book, status }
-      })
-    )
+    dispatch({ type: BOOK_ACTIONS.SET_STATUS_CHANGE, payload: { id, status } })
   }
 
   // calcul des livres filtrés (optimisé avec useMemo)
