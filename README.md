@@ -535,6 +535,368 @@ En résumé : `useReducer` apporte structure et prévisibilité pour la gestion 
 
 
 ## Chapitre 7 : Fetch / API
+[Documentation (fr.react.dev) — Récupérer des données](https://fr.react.dev/learn/you-might-not-need-an-effect#fetching-data)
+[Documentation MDN — Fetch API](https://developer.mozilla.org/fr/docs/Web/API/Fetch_API)
+
+`fetch` est une API JavaScript native pour communiquer avec des serveurs (API REST). Elle remplace l'ancien `XMLHttpRequest`.
+
+### Syntaxe basique
+
+```jsx
+fetch('https://api.example.com/books')
+  .then((response) => response.json())
+  .then((data) => console.log(data))
+  .catch((error) => console.error('Erreur:', error))
+```
+
+- `fetch(url)` retourne une **Promise**.
+- `.then(response => response.json())` — transforme la réponse en JSON.
+- `.then(data => ...)` — traite les données.
+- `.catch(error => ...)` — gère les erreurs réseau.
+
+### Statuts HTTP et gestion d'erreurs
+
+**Important :** `fetch` ne rejette la Promise que si le réseau est inaccessible. Un statut 404 ou 500 ne rejette pas !
+
+```jsx
+fetch('https://api.example.com/books')
+  .then((response) => {
+    if (!response.ok) {
+      throw new Error(`Erreur HTTP: ${response.status}`)
+    }
+    return response.json()
+  })
+  .then((data) => console.log(data))
+  .catch((error) => console.error('Erreur:', error.message))
+```
+
+- `response.ok` — vrai si le statut est 200-299.
+- `response.status` — le code HTTP (200, 404, 500, etc.).
+- `response.json()` — parse le corps en JSON.
+
+### Utilisation avec `useEffect`
+
+La façon canonique de charger des données en React :
+
+```jsx
+import { useState, useEffect } from 'react'
+
+function BookList() {
+  const [books, setBooks] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    // 1. Fonction async
+    async function fetchBooks() {
+      try {
+        setLoading(true)
+        const response = await fetch('https://api.example.com/books')
+        
+        if (!response.ok) {
+          throw new Error(`Erreur HTTP: ${response.status}`)
+        }
+        
+        const data = await response.json()
+        setBooks(data)
+        setError(null)
+      } catch (err) {
+        setError(err.message)
+        setBooks([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    // 2. Appeler la fonction
+    fetchBooks()
+  }, []) // Dépendance vide : fetch une seule fois au montage
+
+  // 3. Rendu conditionnel
+  if (loading) return <p>Chargement...</p>
+  if (error) return <p>Erreur : {error}</p>
+  
+  return (
+    <ul>
+      {books.map((book) => (
+        <li key={book.id}>{book.title}</li>
+      ))}
+    </ul>
+  )
+}
+```
+
+### Fetch avec dépendances
+
+Pour recharger les données si un paramètre change (ex: ID) :
+
+```jsx
+function BookDetail({ bookId }) {
+  const [book, setBook] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchBook() {
+      setLoading(true)
+      try {
+        const response = await fetch(`https://api.example.com/books/${bookId}`)
+        if (!response.ok) throw new Error('Livre non trouvé')
+        const data = await response.json()
+        setBook(data)
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchBook()
+  }, [bookId]) // Re-fetch si bookId change
+
+  // ...
+}
+```
+
+### Fetch avec méthodes POST/PUT/DELETE
+
+Envoyer des données au serveur :
+
+```jsx
+async function addBook(newBook) {
+  try {
+    const response = await fetch('https://api.example.com/books', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(newBook)
+    })
+
+    if (!response.ok) throw new Error('Impossible d\'ajouter le livre')
+    
+    const createdBook = await response.json()
+    return createdBook
+  } catch (err) {
+    console.error(err)
+    throw err
+  }
+}
+
+// Utilisation dans un composant
+function BookForm() {
+  async function handleSubmit(e) {
+    e.preventDefault()
+    try {
+      const newBook = { title: 'Mon livre', author: 'Moi' }
+      const created = await addBook(newBook)
+      console.log('Livre créé:', created)
+    } catch (err) {
+      alert('Erreur: ' + err.message)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      {/* formulaire */}
+    </form>
+  )
+}
+```
+
+### Custom hook pour fetch
+
+Pour réutiliser la logique de fetch ailleurs :
+
+```jsx
+function useFetch(url) {
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    let mounted = true // évite les fuites mémoire
+
+    async function fetchData() {
+      try {
+        setLoading(true)
+        const response = await fetch(url)
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`)
+        }
+        
+        const json = await response.json()
+        
+        // Vérifier que le composant est toujours monté
+        if (mounted) {
+          setData(json)
+          setError(null)
+        }
+      } catch (err) {
+        if (mounted) {
+          setError(err.message)
+          setData(null)
+        }
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+
+    fetchData()
+
+    return () => {
+      mounted = false // cleanup
+    }
+  }, [url])
+
+  return { data, loading, error }
+}
+
+// Utilisation
+function App() {
+  const { data: books, loading, error } = useFetch('/api/books')
+
+  if (loading) return <p>Chargement...</p>
+  if (error) return <p>Erreur: {error}</p>
+  
+  return <BookList books={books} />
+}
+```
+
+### Bonnes pratiques
+
+- **Toujours gérer les trois états :** `loading`, `error`, `data`.
+- **Nettoyer les requêtes en vol :** utiliser `let mounted = true` pour éviter les mises à jour après le démontage.
+- **Vérifier `response.ok`** : `fetch` ne rejette pas sur les erreurs HTTP.
+- **Utiliser `async/await`** plutôt que `.then()` pour plus de lisibilité.
+- **Une requête par effet** : ne pas appeler `fetch` directement dans le JSX.
+- **Dépendances claires :** si la requête dépend d'un paramètre (ID, query), l'inclure dans le tableau de dépendances.
+- **Headers d'authentification :** passer un token dans l'en-tête `Authorization` si nécessaire.
+
+### Fetch vs autres bibliothèques
+
+- **fetch** : natif, simple, suffisant pour la plupart des cas.
+- **axios** : plus verbeux, gère automatiquement les timeouts et les annulations.
+- **TanStack Query (react-query)** : plus puissant, cache, synchronisation, revalidation automatique — pour les apps complexes.
+
+Pour ce projet, `fetch` + `useEffect` suffisent.
+
+### Axios : une alternative plus simple
+
+**Axios** est une bibliothèque HTTP populaire qui simplifie beaucoup de choses par rapport à `fetch` :
+
+**Installation :**
+```bash
+npm install axios
+```
+
+**Différences clés par rapport à `fetch` :**
+- ✅ Transforme automatiquement JSON (pas besoin de `.json()`)
+- ✅ Rejette la Promise sur les statuts d'erreur (404, 500, etc.)
+- ✅ Support des timeouts natif
+- ✅ Annulation de requêtes (`AbortController` équivalent)
+- ✅ Intercepteurs pour les headers, l'authentification globale, etc.
+
+**Exemple basique :**
+```jsx
+import axios from 'axios'
+
+function BookList() {
+  const [books, setBooks] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    async function fetchBooks() {
+      try {
+        const { data } = await axios.get('https://api.example.com/books')
+        setBooks(data) // data est déjà parsé en JSON
+        setError(null)
+      } catch (err) {
+        setError(err.message)
+        setBooks([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchBooks()
+  }, [])
+
+  if (loading) return <p>Chargement...</p>
+  if (error) return <p>Erreur : {error}</p>
+  
+  return (
+    <ul>
+      {books.map((book) => (
+        <li key={book.id}>{book.title}</li>
+      ))}
+    </ul>
+  )
+}
+```
+
+**Comparaison fetch vs axios :**
+
+| Besoin | fetch | axios |
+|--------|-------|-------|
+| GET simple | `fetch(url).then(r => r.json())` | `axios.get(url).then(r => r.data)` |
+| Vérifier le statut | `if (!response.ok) throw ...` | Automatique (rejette sur erreur) |
+| POST avec JSON | `method: 'POST', body: JSON.stringify(data)` | `axios.post(url, data)` |
+| Headers | `headers: {...}` | `headers: {...}` ou intercepteur global |
+| Timeout | À gérer avec `AbortController` | `timeout: 5000` dans la config |
+| Annulation | `AbortController` | `CancelToken` ou `AbortSignal` |
+
+**POST avec axios :**
+```jsx
+async function addBook(newBook) {
+  try {
+    const { data } = await axios.post('https://api.example.com/books', newBook)
+    return data
+  } catch (err) {
+    console.error(err)
+    throw err
+  }
+}
+```
+
+**Avec intercepteur global pour l'authentification :**
+```jsx
+import axios from 'axios'
+
+const api = axios.create({
+  baseURL: 'https://api.example.com',
+  timeout: 10000
+})
+
+// Ajouter le token à toutes les requêtes
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('authToken')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+// Utilisation
+function useBooks() {
+  const [books, setBooks] = useState([])
+
+  useEffect(() => {
+    api.get('/books')
+      .then(({ data }) => setBooks(data))
+      .catch(err => console.error(err))
+  }, [])
+
+  return books
+}
+```
+
+**Quand utiliser axios vs fetch :**
+- **fetch** : prototypes, projets simples, zéro dépendances externes.
+- **axios** : apps complexes, besoin d'intercepteurs, gestion globale des erreurs HTTP, timeouts, annulation.
+
+Pour ce projet `book-tracker`, `fetch` est suffisant, mais axios devient intéressant si tu ajoutes de l'authentification ou des headers globaux.
 
 
 ## Chapitre 8 : Validation de formulaire
