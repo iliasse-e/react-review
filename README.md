@@ -900,6 +900,478 @@ Pour ce projet `book-tracker`, `fetch` est suffisant, mais axios devient intére
 
 
 ## Chapitre 8 : Validation de formulaire
+[Documentation (fr.react.dev) — Formulaires](https://fr.react.dev/learn/adding-interactivity)
+
+La validation de formulaire permet de s'assurer que les données saisies par l'utilisateur sont correctes avant de les traiter.
+
+### 1. Pourquoi valider ?
+- **Prévenir les erreurs :** empêcher l'envoi de données incomplètes ou invalides.
+- **Améliorer l'expérience :** donner du feedback immédiat à l'utilisateur.
+- **Sécurité :** valider côté client (rapidité) ET côté serveur (sécurité).
+- **Clarté :** aider l'utilisateur à corriger ses erreurs.
+
+### 2. Types de validation
+
+**Validation synchrone (immédiate) :**
+- Longueur minimale/maximale (ex: titre ≥ 3 caractères).
+- Format (ex: email avec regex).
+- Valeur requise (ex: le titre ne peut pas être vide).
+
+**Validation asynchrone (requête serveur) :**
+- Vérifier si un email existe déjà.
+- Vérifier si un ISBN est valide.
+- Récupérer des données depuis une API.
+
+Pour ce projet, on va se concentrer sur la validation **synchrone**.
+
+### 3. Stratégies de validation
+
+**À chaque changement (onChange) :**
+- Retour immédiat à l'utilisateur.
+- Peut être trop "verbeux" (trop de messages).
+- Bonne expérience si pas trop strict au départ.
+
+```jsx
+function BookForm() {
+  const [title, setTitle] = useState('')
+  const [titleError, setTitleError] = useState('')
+
+  function handleTitleChange(e) {
+    const value = e.target.value
+    setTitle(value)
+
+    // Valider à chaque changement
+    if (value.trim().length === 0) {
+      setTitleError('Le titre est obligatoire')
+    } else if (value.trim().length < 3) {
+      setTitleError('Au moins 3 caractères requis')
+    } else {
+      setTitleError('') // pas d'erreur
+    }
+  }
+
+  return (
+    <>
+      <input
+        value={title}
+        onChange={handleTitleChange}
+        placeholder="Titre du livre"
+      />
+      {titleError && <p style={{ color: 'red' }}>{titleError}</p>}
+    </>
+  )
+}
+```
+
+**Au submit (à l'envoi du formulaire) :**
+- Valider toute la forme d'un coup.
+- Mieux pour les gros formulaires.
+- Moins "harcelant" pour l'utilisateur.
+
+```jsx
+function BookForm({ onAdd }) {
+  const [title, setTitle] = useState('')
+  const [author, setAuthor] = useState('')
+  const [errors, setErrors] = useState({})
+
+  function validateForm() {
+    const newErrors = {}
+
+    if (title.trim().length === 0) {
+      newErrors.title = 'Le titre est obligatoire'
+    } else if (title.trim().length < 3) {
+      newErrors.title = 'Au moins 3 caractères'
+    }
+
+    if (author.trim().length > 100) {
+      newErrors.author = 'Maximum 100 caractères'
+    }
+
+    return newErrors
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault()
+
+    const newErrors = validateForm()
+
+    // S'il y a des erreurs, les afficher
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
+      return
+    }
+
+    // Sinon, envoyer les données
+    setErrors({})
+    onAdd({ title: title.trim(), author: author.trim() })
+    setTitle('')
+    setAuthor('')
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <label>
+        <span>Titre</span>
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Ex: Les Damnés de la Terre"
+        />
+        {errors.title && <p style={{ color: 'red' }}>{errors.title}</p>}
+      </label>
+
+      <label>
+        <span>Auteur</span>
+        <input
+          value={author}
+          onChange={(e) => setAuthor(e.target.value)}
+          placeholder="Ex: Frantz Fanon"
+        />
+        {errors.author && <p style={{ color: 'red' }}>{errors.author}</p>}
+      </label>
+
+      <button type="submit">Ajouter</button>
+    </form>
+  )
+}
+```
+
+### 4. Objet de schéma de validation
+
+Pour centraliser les règles de validation, on peut créer un objet qui décrit les validations pour chaque champ :
+
+```jsx
+const validationRules = {
+  title: [
+    {
+      check: (value) => value.trim().length === 0,
+      message: 'Le titre est obligatoire'
+    },
+    {
+      check: (value) => value.trim().length < 3,
+      message: 'Au moins 3 caractères requis'
+    },
+    {
+      check: (value) => value.trim().length > 100,
+      message: 'Maximum 100 caractères'
+    }
+  ],
+  author: [
+    {
+      check: (value) => value.trim().length > 100,
+      message: 'Maximum 100 caractères'
+    }
+  ]
+}
+
+function validateForm(formData) {
+  const errors = {}
+
+  for (const [field, rules] of Object.entries(validationRules)) {
+    for (const rule of rules) {
+      if (rule.check(formData[field])) {
+        errors[field] = rule.message
+        break // Afficher une erreur par champ seulement
+      }
+    }
+  }
+
+  return errors
+}
+
+// Utilisation
+const newErrors = validateForm({ title, author })
+```
+
+### 5. Custom hook `useForm`
+
+Pour réutiliser la logique de validation dans plusieurs formulaires, on crée un custom hook :
+
+```jsx
+function useForm(initialState, validationRules, onSubmitCallback) {
+  const [formData, setFormData] = useState(initialState)
+  const [errors, setErrors] = useState({})
+
+  function handleChange(field, value) {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  function validateForm() {
+    const newErrors = {}
+
+    for (const [field, rules] of Object.entries(validationRules)) {
+      for (const rule of rules) {
+        if (rule.check(formData[field])) {
+          newErrors[field] = rule.message
+          break
+        }
+      }
+    }
+
+    return newErrors
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault()
+
+    const newErrors = validateForm()
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
+      return
+    }
+
+    // Données valides : appeler le callback et réinitialiser
+    setErrors({})
+    onSubmitCallback(formData)
+    setFormData(initialState)
+  }
+
+  function reset() {
+    setFormData(initialState)
+    setErrors({})
+  }
+
+  return {
+    formData,
+    errors,
+    handleChange,
+    handleSubmit,
+    reset
+  }
+}
+```
+
+**Utilisation du hook :**
+```jsx
+const bookValidationRules = {
+  title: [
+    {
+      check: (value) => value.trim().length === 0,
+      message: 'Le titre est obligatoire'
+    },
+    {
+      check: (value) => value.trim().length < 3,
+      message: 'Au moins 3 caractères requis'
+    }
+  ],
+  author: [
+    {
+      check: (value) => value.trim().length > 100,
+      message: 'Maximum 100 caractères'
+    }
+  ]
+}
+
+function BookForm({ onAdd }) {
+  const { formData, errors, handleChange, handleSubmit, reset } = useForm(
+    { title: '', author: '' },
+    bookValidationRules,
+    (data) => {
+      onAdd(data)
+      reset()
+    }
+  )
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <label>
+        <span>Titre</span>
+        <input
+          value={formData.title}
+          onChange={(e) => handleChange('title', e.target.value)}
+          placeholder="Ex: Les Damnés de la Terre"
+        />
+        {errors.title && <p style={{ color: 'red' }}>{errors.title}</p>}
+      </label>
+
+      <label>
+        <span>Auteur</span>
+        <input
+          value={formData.author}
+          onChange={(e) => handleChange('author', e.target.value)}
+          placeholder="Ex: Frantz Fanon"
+        />
+        {errors.author && <p style={{ color: 'red' }}>{errors.author}</p>}
+      </label>
+
+      <button type="submit">Ajouter</button>
+    </form>
+  )
+}
+```
+
+### 6. Désactiver le bouton si le formulaire invalide
+
+On peut vérifier si le formulaire est valide **avant** l'envoi pour désactiver le bouton :
+
+```jsx
+function BookForm({ onAdd }) {
+  const { formData, errors, handleChange, handleSubmit } = useForm(...)
+
+  // Valider sans afficher les erreurs
+  function isFormValid() {
+    const tempErrors = {}
+    for (const [field, rules] of Object.entries(bookValidationRules)) {
+      for (const rule of rules) {
+        if (rule.check(formData[field])) {
+          tempErrors[field] = rule.message
+          break
+        }
+      }
+    }
+    return Object.keys(tempErrors).length === 0
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      {/* champs ... */}
+      <button type="submit" disabled={!isFormValid()}>
+        Ajouter
+      </button>
+    </form>
+  )
+}
+```
+
+### 7. Validation temps réel (onChange) avec feedback immédiat
+
+Pour une meilleure expérience, on peut valider chaque champ **pendant qu'on le remplit** :
+
+```jsx
+function useForm(initialState, validationRules, onSubmitCallback) {
+  const [formData, setFormData] = useState(initialState)
+  const [errors, setErrors] = useState({})
+  const [touched, setTouched] = useState({}) // Suivi des champs "touchés"
+
+  function handleChange(field, value) {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+
+    // Valider ce champ en temps réel SI l'utilisateur l'a "touché"
+    if (touched[field]) {
+      validateField(field, value)
+    }
+  }
+
+  function handleBlur(field) {
+    // Marquer le champ comme "touché" quand on quitte le champ
+    setTouched((prev) => ({ ...prev, [field]: true }))
+    // Valider ce champ
+    validateField(field, formData[field])
+  }
+
+  function validateField(field, value) {
+    const fieldRules = validationRules[field] || []
+    const fieldErrors = errors
+
+    for (const rule of fieldRules) {
+      if (rule.check(value)) {
+        fieldErrors[field] = rule.message
+        break
+      }
+    }
+
+    if (!fieldRules.some((rule) => rule.check(value))) {
+      delete fieldErrors[field]
+    }
+
+    setErrors({ ...fieldErrors })
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault()
+
+    // Marquer tous les champs comme touchés
+    const newTouched = {}
+    for (const field of Object.keys(initialState)) {
+      newTouched[field] = true
+    }
+    setTouched(newTouched)
+
+    // Valider tous les champs
+    const newErrors = {}
+    for (const [field, rules] of Object.entries(validationRules)) {
+      for (const rule of rules) {
+        if (rule.check(formData[field])) {
+          newErrors[field] = rule.message
+          break
+        }
+      }
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
+      return
+    }
+
+    // Données valides
+    setErrors({})
+    onSubmitCallback(formData)
+    setFormData(initialState)
+    setTouched({})
+  }
+
+  return {
+    formData,
+    errors,
+    touched,
+    handleChange,
+    handleBlur,
+    handleSubmit
+  }
+}
+```
+
+**Utilisation :**
+```jsx
+function BookForm({ onAdd }) {
+  const { formData, errors, touched, handleChange, handleBlur, handleSubmit } = useForm(
+    { title: '', author: '' },
+    bookValidationRules,
+    onAdd
+  )
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <label>
+        <span>Titre</span>
+        <input
+          value={formData.title}
+          onChange={(e) => handleChange('title', e.target.value)}
+          onBlur={() => handleBlur('title')}
+          placeholder="Ex: Les Damnés de la Terre"
+        />
+        {/* Afficher l'erreur seulement si le champ a été touché */}
+        {touched.title && errors.title && (
+          <p style={{ color: 'red' }}>{errors.title}</p>
+        )}
+      </label>
+
+      {/* Pareil pour author */}
+      <button type="submit">Ajouter</button>
+    </form>
+  )
+}
+```
+
+### 8. Points clés à retenir
+
+1. **Valider à l'envoi** pour les petits formulaires (moins "harcelant").
+2. **Valider au blur** pour une meilleure expérience : afficher les erreurs après que l'utilisateur quitte le champ.
+3. **Créer un custom hook** pour réutiliser la logique entre formulaires.
+4. **Séparer les règles de validation** dans un objet ou un fichier pour la maintenabilité.
+5. **Toujours valider côté serveur** : la validation client est pour l'UX, pas pour la sécurité.
+6. **Messages d'erreur clairs :** dire à l'utilisateur QUOI corriger, pas seulement qu'c'est faux.
+7. **Désactiver le bouton** si le formulaire invalide pour prévenir les clics.
+
+### 9. Stratégie recommandée pour `BookForm`
+
+Pour le projet Book Tracker :
+1. Créer un custom hook `useForm` dans `hooks/useForm.js`.
+2. Définir les règles de validation pour les livres.
+3. Valider au submit et au blur (meilleure UX).
+4. Afficher les erreurs sous chaque champ.
+5. Tester avec des cas limites (titre vide, trop court, trop long, etc.).
 
 
 ## Chapitre 9 : Tests
